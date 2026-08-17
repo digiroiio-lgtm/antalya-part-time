@@ -44,6 +44,28 @@ export default function Footer() {
             Antalya&apos;nın en güncel part time, günlük ve sezonluk iş ilanları
             platformu. Garson, barista, kasiyer ve daha fazlası.
           </p>
+          <ul className="mt-4 space-y-1 text-sm">
+            <li>
+              <Link href="/hakkimizda/" className="hover:text-orange-400 transition-colors">
+                Hakkımızda
+              </Link>
+            </li>
+            <li>
+              <Link href="/iletisim/" className="hover:text-orange-400 transition-colors">
+                İletişim
+              </Link>
+            </li>
+            <li>
+              <Link href="/gizlilik/" className="hover:text-orange-400 transition-colors">
+                Gizlilik Politikası
+              </Link>
+            </li>
+            <li>
+              <Link href="/kullanim-kosullari/" className="hover:text-orange-400 transition-colors">
+                Kullanım Koşulları
+              </Link>
+            </li>
+          </ul>
           <p className="text-xs mt-4 text-gray-500">
             © {new Date().getFullYear()} antalyaparttimeisilanlari.com
           </p>

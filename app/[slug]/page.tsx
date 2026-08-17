@@ -12,6 +12,8 @@ import {
   getJobsByGeo,
   getJobsByProfession,
   getJobsByEmploymentType,
+  getRelatedProfessions,
+  isProfessionIndexable,
   SITE_URL,
 } from "@/lib/data";
 
@@ -56,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const parsed = parseSlug(slug);
   if (!parsed) return {};
 
-  const { label, type } = parsed;
+  const { label, type, key } = parsed;
   const title =
     type === "geo"
       ? `${label} Part Time İş İlanları – Antalya`
@@ -71,13 +73,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `Antalya'da ${label} iş ilanları. Güncel ${label} pozisyonları tüm ilçelerde. SGK'lı, düzenli gelirli iş fırsatları. Hemen başvur.`
       : `Antalya'da ${label} iş ilanları. Part time, günlük ve sezonluk pozisyonlar. Tüm ilçelerde açık ilanlar.`;
 
+  // Profession pages: index only if ≥3 active jobs or whitelisted
+  let shouldIndex = true;
+  if (type === "profession") {
+    const activeJobs = getJobsByProfession(key).filter(
+      (j) => new Date(j.validThrough) >= new Date()
+    );
+    shouldIndex = isProfessionIndexable(key, activeJobs.length);
+  }
+
   return {
     title,
     description,
     alternates: {
       canonical: `${SITE_URL}/${slug}/`,
     },
-    robots: { index: true, follow: true },
+    robots: shouldIndex
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
   };
 }
 
@@ -98,6 +111,16 @@ export default async function LandingPage({ params }: Props) {
     jobs = empType ? getJobsByEmploymentType(empType) : [];
   }
 
+  // Derived: latest postedAt from the filtered job list
+  const latestPostedAt =
+    jobs.length > 0
+      ? new Date(Math.max(...jobs.map((j) => new Date(j.postedAt).getTime())))
+      : null;
+
+  // Related professions (same category) for profession pages
+  const relatedProfessions =
+    type === "profession" ? getRelatedProfessions(key) : [];
+
   const h1 =
     type === "geo"
       ? `${label} Part Time İş İlanları`
@@ -107,7 +130,7 @@ export default async function LandingPage({ params }: Props) {
 
   const intro =
     type === "geo"
-      ? `${label}, Antalya'nın en dinamik ilçelerinden biridir. Turizm, perakende, yeme-içme ve hizmet sektörlerinde her yıl binlerce part time, günlük ve sezonluk iş imkânı sunulmaktadır. Özellikle yaz aylarında otel, kafe ve restoran sektöründe yoğunlaşan ${label} iş ilanları, öğrenciler ve ek gelir arayışındaki çalışanlar için cazip fırsatlar barındırır. ${label}'da asgari ücretin üzerinde ücret sunan işverenler de mevcuttur. Bu sayfada ${label} ilçesine ait tüm güncel part time iş ilanlarını bulabilir, doğrudan başvurabilirsiniz.`
+      ? `${label}, Antalya'nın en dinamik ilçelerinden biridir. Turizm, perakende, yeme-içme ve hizmet sektörlerinde her yıl binlerce part time, günlük ve sezonluk iş imkânı sunulmaktadır. Özellikle yaz aylarında otel, kafe ve restoran sektöründe yoğunlaşan ${label} iş ilanları, öğrenciler ve ek gelir arayışındaki çalışanlar için cazip fırsatlar barındırır.       ${label}&apos;da asgari ücretin üzerinde ücret sunan işverenler de mevcuttur. Bu sayfada ${label} ilçesine ait tüm güncel part time iş ilanlarını bulabilir, doğrudan başvurabilirsiniz.`
       : type === "employment"
       ? `Antalya'da ${label} iş ilanları bu sayfada toplanmaktadır. Tam zamanlı pozisyonlar SGK güvencesi ve düzenli gelir sunar. Muratpaşa, Kepez, Konyaaltı, Lara ve Antalya'nın diğer ilçelerinde ${label} iş fırsatları sürekli güncellenmektedir. Satış danışmanı, güvenlik görevlisi, resepsiyonist ve daha birçok pozisyonda ${label} ilan bulmak için doğru sayfadasınız. Başvurmak istediğiniz ilana tıklayarak işverene doğrudan ulaşabilirsiniz.`
       : `Antalya'da ${label} pozisyonu için çok sayıda part time ve sezonluk ilan bulunmaktadır. Turizm ve hizmet sektörünün kalbi olan Antalya'da ${label} ilanları özellikle Nisan–Ekim döneminde zirveye ulaşır. Hem deneyimli hem de deneyimsiz adaylar için uygun pozisyonlar mevcuttur. Muratpaşa, Lara, Alanya ve Belek başta olmak üzere Antalya'nın tüm ilçelerinde ${label} ilanlarına bu sayfadan ulaşabilirsiniz.`;
@@ -162,6 +185,18 @@ export default async function LandingPage({ params }: Props) {
           {/* Main */}
           <div className="lg:col-span-2">
             <p className="text-gray-600 text-sm leading-relaxed mb-6">{intro}</p>
+            {latestPostedAt && (
+              <p className="text-xs text-gray-400 mb-4">
+                Son güncelleme:{" "}
+                <time dateTime={latestPostedAt.toISOString()}>
+                  {latestPostedAt.toLocaleDateString("tr-TR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </time>
+              </p>
+            )}
 
             {jobs.length > 0 ? (
               <>
@@ -226,6 +261,26 @@ export default async function LandingPage({ params }: Props) {
                         className="text-sm text-gray-600 hover:text-orange-500 transition-colors"
                       >
                         {geoLabel} →
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {type === "profession" && relatedProfessions.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <h2 className="font-bold text-gray-900 mb-3 text-sm">
+                  İlgili Meslekler
+                </h2>
+                <ul className="space-y-1">
+                  {relatedProfessions.slice(0, 8).map((profSlug) => (
+                    <li key={profSlug}>
+                      <Link
+                        href={`/${profSlug}-is-ilanlari/`}
+                        className="text-sm text-gray-600 hover:text-orange-500 transition-colors"
+                      >
+                        {PROFESSION_SLUGS[profSlug]} →
                       </Link>
                     </li>
                   ))}

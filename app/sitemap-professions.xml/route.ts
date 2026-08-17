@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
-import { PROFESSION_SLUGS, SITE_URL } from "@/lib/data";
+import {
+  PROFESSION_SLUGS,
+  SITE_URL,
+  getJobsByProfession,
+  isProfessionIndexable,
+} from "@/lib/data";
 
 export async function GET() {
+  const now = new Date();
   const urls = Object.keys(PROFESSION_SLUGS)
+    .filter((slug) => {
+      const activeCount = getJobsByProfession(slug).filter(
+        (j) => new Date(j.validThrough) >= now
+      ).length;
+      return isProfessionIndexable(slug, activeCount);
+    })
     .map(
       (slug) =>
         `  <url>
