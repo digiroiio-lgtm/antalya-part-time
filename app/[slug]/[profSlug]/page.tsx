@@ -6,8 +6,12 @@ import SearchForm from "@/components/SearchForm";
 import {
   GEO_SLUGS,
   PROFESSION_SLUGS,
+  EMPLOYMENT_TYPE_SLUGS,
+  EMPLOYMENT_SLUG_TO_TYPE,
+  EmploymentType,
   GEO_PROFESSION_PAIRS,
   getJobsByGeoAndProfession,
+  getJobsByGeoAndEmploymentType,
   SITE_URL,
 } from "@/lib/data";
 
@@ -15,19 +19,37 @@ interface Props {
   params: Promise<{ slug: string; profSlug: string }>;
 }
 
-function parseProfSlug(profSlug: string): { key: string; label: string } | null {
+function parseProfSlug(
+  profSlug: string
+):
+  | { kind: "profession"; key: string; label: string }
+  | { kind: "employment"; key: string; label: string }
+  | null {
   const suffix = "-is-ilanlari";
   if (!profSlug.endsWith(suffix)) return null;
   const key = profSlug.slice(0, -suffix.length);
-  if (!PROFESSION_SLUGS[key]) return null;
-  return { key, label: PROFESSION_SLUGS[key] };
+  if (PROFESSION_SLUGS[key])
+    return { kind: "profession", key, label: PROFESSION_SLUGS[key] };
+  if (EMPLOYMENT_TYPE_SLUGS[key])
+    return { kind: "employment", key, label: EMPLOYMENT_TYPE_SLUGS[key] };
+  return null;
 }
 
+// All geo × employment-type combos are pre-rendered
+const GEO_EMPLOYMENT_PAIRS: [string, string][] = Object.keys(GEO_SLUGS).flatMap(
+  (geo) => Object.keys(EMPLOYMENT_TYPE_SLUGS).map((et) => [geo, et] as [string, string])
+);
+
 export async function generateStaticParams() {
-  return GEO_PROFESSION_PAIRS.map(([geo, prof]) => ({
+  const profPairs = GEO_PROFESSION_PAIRS.map(([geo, prof]) => ({
     slug: geo,
     profSlug: `${prof}-is-ilanlari`,
   }));
+  const empPairs = GEO_EMPLOYMENT_PAIRS.map(([geo, et]) => ({
+    slug: geo,
+    profSlug: `${et}-is-ilanlari`,
+  }));
+  return [...profPairs, ...empPairs];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -36,9 +58,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const parsed = parseProfSlug(profSlug);
   if (!geoLabel || !parsed) return {};
 
+  const title =
+    parsed.kind === "employment"
+      ? `${geoLabel} ${parsed.label} İş İlanları – Antalya`
+      : `${geoLabel} ${parsed.label} İş İlanları – Antalya Part Time`;
+
+  const description =
+    parsed.kind === "employment"
+      ? `${geoLabel} ilçesinde ${parsed.label} iş ilanları. SGK'lı, düzenli gelirli pozisyonlar. Hemen başvur.`
+      : `${geoLabel} ilçesinde ${parsed.label} pozisyonları. Part time, günlük ve sezonluk ${parsed.label} ilanları. Hemen başvur.`;
+
   return {
-    title: `${geoLabel} ${parsed.label} İş İlanları – Antalya Part Time`,
-    description: `${geoLabel} ilçesinde ${parsed.label} pozisyonları. Part time, günlük ve sezonluk ${parsed.label} ilanları. Hemen başvur.`,
+    title,
+    description,
     alternates: {
       canonical: `${SITE_URL}/${geoSlug}/${profSlug}/`,
     },
@@ -53,13 +85,22 @@ export default async function GeoXProfessionPage({ params }: Props) {
 
   if (!geoLabel || !parsed) return notFound();
 
-  // Only index if in approved pairs
-  const approved = GEO_PROFESSION_PAIRS.some(
-    ([g, p]) => g === geoSlug && p === parsed.key
-  );
-  if (!approved) return notFound();
+  // For profession combos: only approved pairs are indexed
+  if (parsed.kind === "profession") {
+    const approved = GEO_PROFESSION_PAIRS.some(
+      ([g, p]) => g === geoSlug && p === parsed.key
+    );
+    if (!approved) return notFound();
+  }
 
-  const jobs = getJobsByGeoAndProfession(geoSlug, parsed.key);
+  const jobs =
+    parsed.kind === "employment"
+      ? getJobsByGeoAndEmploymentType(
+          geoSlug,
+          (EMPLOYMENT_SLUG_TO_TYPE[parsed.key] as EmploymentType) ?? "FULL_TIME"
+        )
+      : getJobsByGeoAndProfession(geoSlug, parsed.key);
+
   const h1 = `${geoLabel} ${parsed.label} İş İlanları`;
 
   const breadcrumb = {
@@ -106,15 +147,19 @@ export default async function GeoXProfessionPage({ params }: Props) {
           <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 mb-4">
             {h1}
           </h1>
-          <SearchForm defaultGeo={geoSlug} defaultProfession={parsed.key} />
+          <SearchForm
+            defaultGeo={geoSlug}
+            defaultProfession={parsed.kind === "profession" ? parsed.key : ""}
+            defaultEmploymentType={parsed.kind === "employment" ? parsed.key : ""}
+          />
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-10">
         <p className="text-gray-600 text-sm leading-relaxed mb-6">
-          {geoLabel} ilçesinde {parsed.label} arayışındaysanız doğru sayfadasınız.
-          Antalya&apos;nın bu popüler ilçesinde {parsed.label} pozisyonları
-          için part time, günlük ve sezonluk ilanların tamamı aşağıda listelenmektedir.
+          {parsed.kind === "employment"
+            ? `${geoLabel} ilçesinde ${parsed.label} iş arıyorsanız doğru sayfadasınız. Antalya'nın bu popüler ilçesinde ${parsed.label} pozisyonları için güncel ilanların tamamı aşağıda listelenmektedir.`
+            : `${geoLabel} ilçesinde ${parsed.label} arayışındaysanız doğru sayfadasınız. Antalya'nın bu popüler ilçesinde ${parsed.label} pozisyonları için part time, günlük ve sezonluk ilanların tamamı aşağıda listelenmektedir.`}
         </p>
 
         {jobs.length > 0 ? (
@@ -140,12 +185,21 @@ export default async function GeoXProfessionPage({ params }: Props) {
               >
                 {geoLabel} İlanları
               </Link>
-              <Link
-                href={`/${parsed.key}-is-ilanlari/`}
-                className="text-orange-500 hover:underline text-sm"
-              >
-                Tüm {parsed.label} İlanları
-              </Link>
+              {parsed.kind === "employment" ? (
+                <Link
+                  href={`/${parsed.key}-is-ilanlari/`}
+                  className="text-orange-500 hover:underline text-sm"
+                >
+                  Tüm {parsed.label} İlanları
+                </Link>
+              ) : (
+                <Link
+                  href={`/${parsed.key}-is-ilanlari/`}
+                  className="text-orange-500 hover:underline text-sm"
+                >
+                  Tüm {parsed.label} İlanları
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -153,3 +207,5 @@ export default async function GeoXProfessionPage({ params }: Props) {
     </>
   );
 }
+
+

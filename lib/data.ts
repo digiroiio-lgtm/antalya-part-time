@@ -15,6 +15,21 @@ export const GEO_SLUGS: Record<string, string> = {
   kemer: "Kemer",
 };
 
+export const EMPLOYMENT_TYPE_SLUGS: Record<string, string> = {
+  "tam-zamanli": "Tam Zamanlı",
+  "part-time": "Part Time",
+  gunluk: "Günlük",
+  sezonluk: "Sezonluk",
+};
+
+// Maps employment type slug → EmploymentType value used in Job
+export const EMPLOYMENT_SLUG_TO_TYPE: Record<string, string> = {
+  "tam-zamanli": "FULL_TIME",
+  "part-time": "PART_TIME",
+  gunluk: "TEMPORARY",
+  sezonluk: "TEMPORARY",
+};
+
 export const PROFESSION_SLUGS: Record<string, string> = {
   garson: "Garson",
   barista: "Barista",
@@ -240,6 +255,63 @@ export const JOBS: Job[] = [
     address: "Lara, Antalya",
     applyUrl: "mailto:info@sahilcoffee.com",
   },
+  {
+    id: "9",
+    title: "Tam Zamanlı Satış Danışmanı",
+    company: "AVM Moda Antalya",
+    companySlug: "avm-moda-antalya",
+    district: "Muratpaşa",
+    districtSlug: "muratpasa",
+    profession: "Satış Danışmanı",
+    professionSlug: "satis-danismani",
+    salary: "22.000 ₺/ay",
+    employmentType: "FULL_TIME",
+    employmentLabel: "Tam Zamanlı",
+    postedAt: "2026-08-16T09:00:00+03:00",
+    validThrough: "2026-09-30T23:59:59+03:00",
+    description:
+      "Antalya merkezdeki mağazamızda tam zamanlı satış danışmanı arıyoruz. Hafta içi ve hafta sonu vardiyalı çalışma sistemi uygulanmaktadır. SGK ve yemek kartı dahil. Deneyimli adaylara öncelik verilecektir.",
+    address: "Muratpaşa, Antalya",
+    applyUrl: "mailto:ik@avmmoda.com",
+  },
+  {
+    id: "10",
+    title: "Tam Zamanlı Güvenlik Görevlisi",
+    company: "Güven Koruma AŞ",
+    companySlug: "guven-koruma",
+    district: "Kepez",
+    districtSlug: "kepez",
+    profession: "Güvenlik Görevlisi",
+    professionSlug: "guvenlik",
+    salary: "23.500 ₺/ay",
+    employmentType: "FULL_TIME",
+    employmentLabel: "Tam Zamanlı",
+    postedAt: "2026-08-14T08:00:00+03:00",
+    validThrough: "2026-09-28T23:59:59+03:00",
+    description:
+      "Kepez ilçesindeki iş merkezlerinde görev yapacak güvenlik görevlisi alınacaktır. 12 saat vardiya sistemi, silahlı veya silahsız tercih edilebilir. Özel güvenlik belgesi zorunludur.",
+    address: "Kepez, Antalya",
+    applyUrl: "mailto:ik@guvenkoruma.com",
+  },
+  {
+    id: "11",
+    title: "Tam Zamanlı Resepsiyonist",
+    company: "City Otel Antalya",
+    companySlug: "city-otel-antalya",
+    district: "Konyaaltı",
+    districtSlug: "konyaalti",
+    profession: "Resepsiyonist",
+    professionSlug: "resepsiyonist",
+    salary: "25.000 ₺/ay",
+    employmentType: "FULL_TIME",
+    employmentLabel: "Tam Zamanlı",
+    postedAt: "2026-08-13T10:00:00+03:00",
+    validThrough: "2026-10-01T23:59:59+03:00",
+    description:
+      "Konyaaltı sahilinde yer alan butik otelimizdeki resepsiyona tam zamanlı personel alınacaktır. İngilizce bilgisi zorunludur, ikinci yabancı dil avantaj sağlar. SGK + servis imkânı mevcuttur.",
+    address: "Konyaaltı, Antalya",
+    applyUrl: "mailto:kariyer@cityotel.com.tr",
+  },
 ];
 
 export const COMPANIES: Company[] = [
@@ -291,7 +363,44 @@ export const COMPANIES: Company[] = [
     districtSlug: "lara",
     jobCount: 2,
   },
+  {
+    slug: "avm-moda-antalya",
+    name: "AVM Moda Antalya",
+    description: "Muratpaşa merkezinde perakende moda mağazası.",
+    district: "Muratpaşa",
+    districtSlug: "muratpasa",
+    jobCount: 1,
+  },
+  {
+    slug: "guven-koruma",
+    name: "Güven Koruma AŞ",
+    description: "Antalya ve ilçelerinde özel güvenlik hizmetleri.",
+    district: "Kepez",
+    districtSlug: "kepez",
+    jobCount: 1,
+  },
+  {
+    slug: "city-otel-antalya",
+    name: "City Otel Antalya",
+    description: "Konyaaltı sahilinde butik otel.",
+    district: "Konyaaltı",
+    districtSlug: "konyaalti",
+    jobCount: 1,
+  },
 ];
+
+export function getJobsByEmploymentType(employmentType: EmploymentType): Job[] {
+  return JOBS.filter((j) => j.employmentType === employmentType);
+}
+
+export function getJobsByGeoAndEmploymentType(
+  geoSlug: string,
+  employmentType: EmploymentType
+): Job[] {
+  return JOBS.filter(
+    (j) => j.districtSlug === geoSlug && j.employmentType === employmentType
+  );
+}
 
 export function getJobsByGeo(geoSlug: string): Job[] {
   return JOBS.filter((j) => j.districtSlug === geoSlug);

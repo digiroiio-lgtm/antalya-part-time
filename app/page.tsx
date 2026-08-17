@@ -7,6 +7,7 @@ import {
   COMPANIES,
   GEO_SLUGS,
   PROFESSION_SLUGS,
+  EMPLOYMENT_TYPE_SLUGS,
   SITE_URL,
   SITE_NAME,
 } from "@/lib/data";
@@ -85,6 +86,24 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {latestJobs.map((job) => (
             <JobCard key={job.id} job={job} />
+          ))}
+        </div>
+      </section>
+
+      {/* Employment Types */}
+      <section className="max-w-6xl mx-auto px-4 py-12">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">
+          Çalışma Türüne Göre İlanlar
+        </h2>
+        <div className="flex flex-wrap gap-3">
+          {Object.entries(EMPLOYMENT_TYPE_SLUGS).map(([slug, label]) => (
+            <Link
+              key={slug}
+              href={`/${slug}-is-ilanlari/`}
+              className="bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium text-sm px-4 py-2 rounded-full border border-purple-200 transition-colors"
+            >
+              {label}
+            </Link>
           ))}
         </div>
       </section>
